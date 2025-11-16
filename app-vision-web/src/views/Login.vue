@@ -72,14 +72,12 @@
   // FIM DA MUDANÇA: Wrapper de Centralização
 </template>
 
-
-
 <script setup>
 import { ref } from 'vue'
-
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
 const mensagemErro = ref('')
 const email = ref('')
 const senha = ref('')
@@ -100,34 +98,72 @@ const logarUsuario = async () => {
 
   try {
     localStorage.removeItem('token')
+    localStorage.removeItem('tokenExpiration')
 
-    // Lembrete: Esta é uma simulação.
-    // A equipe de backend substituirá esta chamada 'login()'
-    // const response = await login(email.value, senha.value)
-    
-    // Simulação de uma resposta de sucesso para teste
-    const response = { token: 'simulated-token-12345' }
+    const response = await fetch('http://localhost:8080/login/logar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        email: email.value,
+        senha: senha.value
+      })
+    })
 
+    // TRATAMENTO DE ERRO
+    if (!response.ok) {
 
-    if (!response || !response.token) {
-      mensagemErro.value = 'E-mail ou senha incorretos.'
+      // ============================
+      // 401 / 400 → Erro de login
+      // ============================
+      if (response.status === 401 || response.status === 400) {
+        const texto = "E-mail ou senha incorretos."
+        mensagemErro.value = texto
+        alert(texto)
+        return
+      }
+
+      // ============================
+      // 500 → erro interno vindo da API
+      // ============================
+      if (response.status === 500) {
+        const errorText = await response.text()   // pega o texto puro
+        mensagemErro.value = errorText
+        alert(errorText)
+        return
+      }
+
+      // Outros erros genéricos
+      mensagemErro.value = 'Erro no login. Tente novamente mais tarde.'
+      alert('Erro no login. Tente novamente mais tarde.')
       return
     }
 
-    localStorage.setItem('token', response.token)
+    // Se chegou aqui, deu tudo certo
+    const data = await response.json()
+
+    if (!data || !data.token) {
+      const texto = 'Erro ao receber token de autenticação.'
+      mensagemErro.value = texto
+      alert(texto)
+      return
+    }
+
+    localStorage.setItem('token', data.token)
+
+    if (data.expirationTime) {
+      localStorage.setItem('tokenExpiration', data.expirationTime)
+    }
+
     window.dispatchEvent(new Event('atualizarUsuario'))
-    
-    router.push('/form-admin') // Redirecionamento corrigido
+    router.push('/form-admin')
 
   } catch (error) {
-    // Tratamento de erro (se a chamada real falhar)
-    // if (error.response?.status === 401) {
-    //   mensagemErro.value = 'E-mail ou senha incorretos.'
-    // } else {
-    //   mensagemErro.value = 'Erro no login. Tente novamente mais tarde.'
-    // }
-    console.error("Erro na simulação de login:", error)
-    mensagemErro.value = 'Erro na simulação de login.'
+    console.error('Erro ao fazer login:', error)
+    mensagemErro.value = 'Erro no login. Verifique sua conexão e tente novamente.'
+    alert('Erro no login. Verifique sua conexão e tente novamente.')
   }
 }
 
@@ -141,11 +177,12 @@ function fecharModalEsqueci() {
 }
 
 function enviarLigacao() {
-  // Aqui você pode implementar a lógica para enviar o e-mail/telefone para recuperação.
+  // aqui você pode trocar pelo fluxo real de recuperação
   alert(`Enviado link de recuperação para: ${emailRecuperar.value}`)
   fecharModalEsqueci()
 }
 </script>
+
 <style>
 /* INÍCIO DA MUDANÇA: Estilos de Centralização */
 .login-page-wrapper {
@@ -491,8 +528,6 @@ form {
   -webkit-appearance: none;
   margin-bottom: 12px;
   margin-top: -17px;
-
-
 }
 
 .input-group input[type="checkbox"]:checked {
