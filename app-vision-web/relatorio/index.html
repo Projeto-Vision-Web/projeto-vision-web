@@ -1,0 +1,589 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios e Análises - Clima Organizacional</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --card-bg-color: #24243d;
+            --text-color: #f0f0f0;
+            --subtext-color: #a0a0c0;
+            --primary-color: #5d50c6;
+            --success-color: #00e090;
+            --danger-color: #ff416c;
+            --warning-color: #ffc107;
+            --info-color: #4a90e2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333355;
+            margin-bottom: 20px;
+        }
+
+        .header-top {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             margin-bottom: 10px;
+        }
+
+        .header-title {
+            font-size: 26px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            color: var(--subtext-color);
+        }
+        
+        .header-actions button {
+            background-color: var(--card-bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--primary-color);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .header-actions button:last-child {
+            background-color: var(--primary-color); 
+            border-color: var(--primary-color);
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 20px;
+            padding-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: var(--subtext-color);
+            margin-right: 10px;
+        }
+
+        .filter-controls select {
+            background-color: var(--card-bg-color);
+            color: var(--text-color);
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(250px, 1fr));
+            gap: 20px;
+}
+
+        .kpi-card {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+    gap: 8px;
+}
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .kpi-icon::before { 
+             content: '\2666'; 
+             font-size: 24px;
+             color: var(--primary-color);
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .kpi-change.success {
+            color: var(--success-color);
+            background-color: rgba(0, 224, 144, 0.15);
+        }
+
+        .kpi-change.danger {
+            color: var(--danger-color);
+            background-color: rgba(255, 65, 108, 0.15);
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: var(--subtext-color);
+        }
+        
+        .kpi-subtext {
+             font-size: 12px;
+             color: #666;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .chart-subtitle {
+            font-size: 13px;
+            color: var(--subtext-color);
+            margin-bottom: 15px;
+        }
+        
+        .chart-legend-custom {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .legend-item::before {
+            content: "•";
+            margin-right: 5px;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .legend-item.blue::before { color: #5d50c6; }
+        .legend-item.purple::before { color: #9c27b0; }
+        .legend-item.light-purple::before { color: #ce93d8; }
+
+        .insights-top-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .insights-container {
+            grid-column: 1 / -1; 
+        }
+
+        .insights-title {
+             font-size: 18px;
+             font-weight: bold;
+             margin-bottom: 15px;
+             padding-top: 20px;
+             border-top: 1px solid #333355;
+        }
+
+        .insights-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .insight-card {
+            background-color: var(--card-bg-color);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            border-left: 4px solid;
+        }
+
+        .insight-icon {
+            font-size: 24px;
+            color: var(--primary-color);
+            padding: 5px;
+            border-radius: 50%;
+            margin-top: 2px;
+        }
+        
+        .insight-icon::before {
+            content: '\2605'; 
+            font-size: 20px;
+        }
+
+        .insight-card h4 {
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+
+        .insight-card p {
+            font-size: 14px;
+            color: var(--subtext-color);
+        }
+
+        .success-insight { border-left-color: var(--success-color); }
+        .warning-insight { border-left-color: var(--warning-color); }
+        .info-insight { border-left-color: var(--info-color); }
+        
+        .chart-legend-pie {
+            font-size: 14px;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333355;
+            border-radius: 5px;
+        }
+
+        .legend-item-pie {
+            margin-bottom: 5px;
+            padding-left: 15px;
+            position: relative;
+        }
+        
+        .legend-item-pie::before { content: "•"; position: absolute; left: 0; }
+        .legend-item-pie:nth-child(1)::before { color: #9c27b0; } 
+        .legend-item-pie:nth-child(2)::before { color: #5d50c6; } 
+        .legend-item-pie:nth-child(3)::before { color: #a0a0c0; } 
+        .legend-item-pie:nth-child(4)::before { color: #ffc107; } 
+        .legend-item-pie:nth-child(5)::before { color: #ff416c; } 
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+             <div class="header-top">
+                <div>
+                    <h1 class="header-title">Relatórios e Análises</h1>
+                    <p class="header-subtitle">Visualize os dados de clima organizacional da sua empresa</p>
+                </div>
+                <div class="header-actions">
+                    <button>Filtros</button>
+                    <button>Exportar PDF</button>
+                </div>
+             </div>
+            <div class="filter-controls">
+                <div class="control-group">
+                    <label>Período:</label>
+                    <select><option>Último Trimestre</option></select>
+                </div>
+                <div class="control-group">
+                    <label>Pesquisa:</label>
+                    <select><option>Todas as Pesquisas</option></select>
+                </div>
+            </div>
+        </div>
+
+        <main class="dashboard-grid">
+            
+            <div class="kpi-row">
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-icon"></span>
+                        <span class="kpi-change success">↑ +5%</span>
+                    </div>
+                    <div class="kpi-value">87%</div>
+                    <div class="kpi-label">Taxa de Participação</div>
+                    <div class="kpi-subtext">vs trimestre anterior</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-icon"></span>
+                        <span class="kpi-change success">↑ +8 pts</span>
+                    </div>
+                    <div class="kpi-value">82</div>
+                    <div class="kpi-label">Índice de Satisfação</div>
+                    <div class="kpi-subtext">escala 0-100</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-icon"></span>
+                        <span class="kpi-change success">↑ +3%</span>
+                    </div>
+                    <div class="kpi-value">79%</div>
+                    <div class="kpi-label">Engajamento Médio</div>
+                    <div class="kpi-subtext">vs mês anterior</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-icon"></span>
+                        <span class="kpi-change danger">↓ -2 pts</span>
+                    </div>
+                    <div class="kpi-value">45</div>
+                    <div class="kpi-label">NPS Organizacional</div>
+                    <div class="kpi-subtext">Net Promoter Score</div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card large">
+                    <h3 class="chart-title">Evolução dos Indicadores</h3>
+                    <p class="chart-subtitle">Últimos 6 meses - Pontuação média por categoria</p>
+                    <canvas id="lineChart" style="max-height: 200px;"></canvas>
+                    <div class="chart-legend-custom">
+                        <span class="legend-item blue">Satisfação</span>
+                        <span class="legend-item purple">Engajamento</span>
+                        <span class="legend-item light-purple">Comunicação</span>
+                    </div>
+                </div>
+
+                <div class="chart-card large">
+                    <h3 class="chart-title">Desempenho por Departamento</h3>
+                    <p class="chart-subtitle">Índice de satisfação geral por área</p>
+                    <canvas id="barChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+            
+            <div class="insights-top-grid">
+                 <div class="chart-card small">
+                    <h3 class="chart-title">Distribuição de Satisfação</h3>
+                    <p class="chart-subtitle">Percentual de colaboradores por nível</p>
+                    <canvas id="doughnutChart" style="max-height: 250px;"></canvas>
+                    <div class="chart-legend-pie">
+                        <p class="legend-item-pie">Muito Satisfeito: 35%</p>
+                        <p class="legend-item-pie">Satisfeito: 40%</p>
+                        <p class="legend-item-pie">Neutro: 15%</p>
+                        <p class="legend-item-pie">Muito Insatisfeito: 3%</p>
+                        <p class="legend-item-pie">Insatisfeito: 7%</p>
+                    </div>
+                </div>
+
+                <div class="chart-card small">
+                    <h3 class="chart-title">Análise Comparativa</h3>
+                    <p class="chart-subtitle">Período atual vs anterior por categoria</p>
+                    <canvas id="radarChart" style="max-height: 250px;"></canvas>
+                    <div class="chart-legend-custom">
+                        <span class="legend-item purple">Período Atual</span>
+                        <span class="legend-item light-purple">Período Anterior</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insights-container">
+                <h3 class="insights-title">Insights e Recomendações</h3>
+                <div class="insights-list">
+                    <div class="insight-card success-insight">
+                        <span class="insight-icon"></span>
+                        <div>
+                            <h4>Melhoria Significativa em Comunicação</h4>
+                            <p>A categoria "Comunicação" apresentou crescimento de 8 pontos no último trimestre. As iniciativas de transparência e reuniões periódicas estão surtindo efeito positivo.</p>
+                        </div>
+                    </div>
+
+                    <div class="insight-card warning-insight">
+                        <span class="insight-icon"></span>
+                        <div>
+                            <h4>Atenção: Reconhecimento Profissional</h4>
+                            <p>A categoria "Reconhecimento" apresenta a menor pontuação (58 pts). Recomenda-se implementar programa de valorização e feedback mais frequente.</p>
+                        </div>
+                    </div>
+
+                    <div class="insight-card info-insight">
+                        <span class="insight-icon"></span>
+                        <div>
+                            <h4>Alta Taxa de Participação</h4>
+                            <p>Com 87% de participação, a empresa demonstra forte engajamento dos colaboradores com o processo de pesquisa, superando a média do mercado (65%).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cores baseadas na imagem
+            const colorSatisfacao = '#5d50c6'; // Azul/Roxo
+            const colorEngajamento = '#9c27b0'; // Roxo Escuro
+            const colorComunicacao = '#ce93d8'; // Roxo Claro
+            const colorAnterior = '#ce93d8';
+            const colorAtual = '#9c27b0';
+            
+            // --- GRÁFICO DE LINHA (Evolução dos Indicadores) ---
+            new Chart(document.getElementById('lineChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                    datasets: [{
+                        label: 'Satisfação',
+                        data: [70, 72, 75, 76, 78, 80],
+                        borderColor: colorSatisfacao,
+                        backgroundColor: 'rgba(93, 80, 198, 0.1)',
+                        tension: 0.4,
+                        pointRadius: 5,
+                    },
+                    {
+                        label: 'Engajamento',
+                        data: [68, 70, 72, 74, 76, 79],
+                        borderColor: colorEngajamento,
+                        backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                        tension: 0.4,
+                        pointRadius: 5,
+                    },
+                    {
+                        label: 'Comunicação',
+                        data: [65, 68, 70, 72, 74, 77],
+                        borderColor: colorComunicacao,
+                        backgroundColor: 'rgba(206, 147, 216, 0.1)',
+                        tension: 0.4,
+                        pointRadius: 5,
+                    }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: '#333355' }, ticks: { color: '#f0f0f0' } },
+                        y: { beginAtZero: true, max: 100, grid: { color: '#333355' }, ticks: { color: '#f0f0f0' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // --- GRÁFICO DE BARRA (Desempenho por Departamento) ---
+            new Chart(document.getElementById('barChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['TI', 'RH', 'Vendas', 'Marketing', 'Financeiro', 'Operações'],
+                    datasets: [{
+                        label: 'Pontuação',
+                        data: [78, 75, 70, 76, 72, 68],
+                        backgroundColor: colorSatisfacao,
+                        borderRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#f0f0f0' } },
+                        y: { beginAtZero: true, max: 100, grid: { color: '#333355' }, ticks: { color: '#f0f0f0' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // --- GRÁFICO DE PIZZA (Distribuição de Satisfação) ---
+            new Chart(document.getElementById('doughnutChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Muito Satisfeito', 'Satisfeito', 'Neutro', 'Insatisfeito', 'Muito Insatisfeito'],
+                    datasets: [{
+                        data: [35, 40, 15, 7, 3], // Total 100%
+                        backgroundColor: ['#9c27b0', '#5d50c6', '#a0a0c0', '#ff416c', '#ffc107'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // --- GRÁFICO RADAR (Análise Comparativa) ---
+            new Chart(document.getElementById('radarChart').getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: ['Liderança', 'Ambiente', 'Benefícios', 'Crescimento', 'Comunicação', 'Reconhecimento'],
+                    datasets: [{
+                        label: 'Período Atual',
+                        data: [8, 7, 6, 8, 9, 5.8],
+                        borderColor: colorAtual,
+                        backgroundColor: 'rgba(156, 39, 176, 0.2)',
+                        pointBackgroundColor: colorAtual
+                    },
+                    {
+                        label: 'Período Anterior',
+                        data: [7.5, 6.5, 5.5, 7, 8.2, 5],
+                        borderColor: colorAnterior,
+                        backgroundColor: 'rgba(206, 147, 216, 0.2)',
+                        pointBackgroundColor: colorAnterior
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#333355' },
+                            grid: { color: '#333355' },
+                            pointLabels: { color: '#f0f0f0', font: { size: 12 } },
+                            suggestedMin: 0,
+                            suggestedMax: 10,
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+=======
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>visionweb</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
