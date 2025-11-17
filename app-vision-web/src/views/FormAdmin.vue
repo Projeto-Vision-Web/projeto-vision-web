@@ -1441,7 +1441,9 @@ body {
   font-size: 0.75em;
   font-weight: bold;
   margin-left: 10px;
-  color: var(--color-bg-dark);
+  background-color: #a855f7; /* Roxo neon */
+  color: #fff;
+  box-shadow: 0 0 6px #a855f7aa; /* Brilho leve */
 }
 
 .status-tag.ativa { background-color: #22c55e; } 
