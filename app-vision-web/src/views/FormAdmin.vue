@@ -95,6 +95,7 @@
                     </button>
                     
                     <button 
+                      v-if="survey.status === 'Rascunho'"
                       class="icon-btn" 
                       title="Editar" 
                       @click.stop="openEditSurveyModal(survey)"
@@ -103,11 +104,21 @@
                     </button>
                     
                     <button 
+                      v-if="survey.status === 'Rascunho'"
                       class="icon-btn" 
                       title="Deletar" 
                       @click.stop="deleteSurvey(survey.id)"
                     >
                       <img src="../assets/deletar.png" alt="Deletar">
+                    </button>
+
+                     <button 
+                      v-if="survey.status === 'Disparada'"
+                      class="icon-btn"
+                      title="Encerrar a coleta" 
+                      @click.stop="encerrarColeta(survey)"
+                    >
+                      <img src="../assets/stop.png" alt="Encerrar">
                     </button>
                   </div>
                 </div>
@@ -608,6 +619,50 @@ async function carregarUsuarioLogado() {
   }
 }
 
+async function encerrarColeta(survey) {
+  if (!survey.coletaId) {
+    alert('Não foi possível identificar a coleta desta pesquisa.');
+    return;
+  }
+
+  // opcional, mas ajuda:
+  if (!confirm('Tem certeza que deseja encerrar esta coleta?')) {
+    return;
+  }
+
+  try {
+    loading.value = true;
+    errorMessage.value = '';
+
+    // chama o endpoint de encerramento
+    const { data } = await api.post(`/coleta/${survey.coletaId}/encerrar`);
+
+    // Atualiza na memória
+    // Se a API devolver o status da coleta, usamos ele, senão caímos para "Encerrada"
+    survey.status = data?.status ?? 'Encerrada';
+
+    // 🔹 Atualiza no localStorage
+    const map = loadColetaMap();
+    const persisted = map[survey.id] ?? {};
+
+    map[survey.id] = {
+      ...persisted,
+      coletaId: data?.id ?? survey.coletaId,
+      statusFront: survey.status, // ou 'Encerrada' se quiser fixo
+    };
+
+    saveColetaMap(map);
+
+    alert('Coleta encerrada com sucesso!');
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao encerrar coleta.');
+  } finally {
+    loading.value = false;
+  }
+}
+
+
 async function dispararColeta(survey) {
   if (!survey.coletaId) {
     alert('Não foi possível identificar a coleta desta pesquisa.');
@@ -710,8 +765,7 @@ onUnmounted(() => {
 });
 
 const goToReportsPage = () => {
-  // router.push('/relatorios');
-  alert('Página de Relatórios (em construção)');
+  router.push('/relatorio');
 };
 
 const selectProfile = (p) => {
@@ -1009,7 +1063,7 @@ async function submitResponses() {
 
   const respostasPayload = qts.map((q) => ({
     idPergunta: q.id,
-    valorResposta: collaboratorResponses.value[q.id],
+    valor: collaboratorResponses.value[q.id],
   }));
 
   const payload = {
@@ -1021,7 +1075,9 @@ async function submitResponses() {
     loading.value = true;
     errorMessage.value = '';
 
-    await api.post(`/coletas/${coletaId}/respostas`, payload);
+    console.log("O payload para resposta da pergunta: ", JSON.stringify(payload))
+
+    await api.post(`/coleta/${coletaId}/respostas`, payload);
 
     alert(
       `Obrigado! Sua resposta para "${currentSurveyToRespond.value.title}" foi enviada com sucesso!`
@@ -1038,6 +1094,21 @@ async function submitResponses() {
     closeResponseModal();
   } catch (err) {
     console.error(err);
+
+     const backendMessage =
+      err?.response?.data?.message ||        // se você tiver um handler que monta { message: "..." }
+      err?.response?.data ||                 // se o Spring estiver devolvendo a string "Colaborador já respondeu esta coleta"
+      err?.message;
+
+    if (
+      typeof backendMessage === 'string' &&
+      backendMessage.includes('Colaborador já respondeu esta coleta')
+    ) {
+      alert('Você já respondeu esta pesquisa. Obrigado pela participação!');
+      closeResponseModal();
+      return;
+    }
+
     alert('Erro ao enviar respostas.');
   } finally {
     loading.value = false;

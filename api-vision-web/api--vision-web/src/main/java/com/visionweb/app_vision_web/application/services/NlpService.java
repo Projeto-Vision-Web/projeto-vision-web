@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visionweb.app_vision_web.application.dto.NlpResultado;
 import com.visionweb.app_vision_web.domain.core.entities.Enum.Sentimento;
+import com.visionweb.app_vision_web.domain.core.entities.Pergunta;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -114,4 +115,9 @@ public class NlpService {
             return new NlpResultado(Sentimento.NEUTRO, 0.0, "GERAL", 0.0);
         }
     }
+
+
+
+
+
 }

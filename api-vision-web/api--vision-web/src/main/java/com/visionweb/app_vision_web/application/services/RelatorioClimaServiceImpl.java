@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class RelatorioClimaServiceImpl implements RelatorioClimaService {
+public class    RelatorioClimaServiceImpl implements RelatorioClimaService {
 
     private final FeedbackProcessadoRepository feedbackRepo;
     private final ColaboradorRepository colaboradorRepo;

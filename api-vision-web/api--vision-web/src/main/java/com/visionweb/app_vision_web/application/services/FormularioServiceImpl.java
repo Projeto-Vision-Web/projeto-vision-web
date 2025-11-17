@@ -39,8 +39,30 @@ public class FormularioServiceImpl implements FormularioService {
 
     @Override
     public Formulario atualizar(Integer id, Formulario form) {
-        return formularioRepository.save(form);
+        Formulario existente = formularioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Formulário não encontrado: " + id));
+
+        // Atualiza apenas os campos que podem mudar
+        existente.setTitulo(form.getTitulo());
+        existente.setDescricao(form.getDescricao());
+        existente.setAtivo(form.getAtivo());
+        existente.setEmpresa(form.getEmpresa());
+        existente.setCriadoPor(form.getCriadoPor());
+
+        // Se você já montou a lista de perguntas no "form"
+        // e quiser substituir tudo:
+        if (form.getPerguntas() != null) {
+            existente.getPerguntas().clear();
+            form.getPerguntas().forEach(p -> {
+                p.setFormulario(existente); // garante o vínculo
+                existente.getPerguntas().add(p);
+            });
+        }
+
+        return formularioRepository.save(existente);
     }
+
+
 
     @Override
     public void excluir(Integer id) {

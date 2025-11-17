@@ -79,10 +79,95 @@ public class FormularioController {
     }
 
 
-   // @PutMapping
-    //public ResponseEntity<FormularioResponseDto> editar(@RequestBody @Valid FormularioCreateDto dto){
+    @PutMapping("/{id}")
+    public ResponseEntity<FormularioResponseDto> editar(
+            @PathVariable Integer id,
+            @RequestBody @Valid FormularioCreateDto dto
+    ) {
+        // 1) Busca o formulário existente
+        Formulario formExistente = formularioService.buscarPorId(id);
 
-    //}
+        // 2) Atualiza os campos básicos
+        formExistente.setTitulo(dto.titulo());
+        formExistente.setDescricao(dto.descricao());
+        formExistente.setAtivo(dto.ativo());
+
+        // Empresa (referência por id)
+        if (dto.idEmpresa() != null) {
+            formExistente.setEmpresa(
+                    Empresa.builder()
+                            .id_empresa(dto.idEmpresa())
+                            .build()
+            );
+        } else {
+            formExistente.setEmpresa(null);
+        }
+
+        // Usuário criador (se vier no DTO; se quiser manter o antigo, é só tirar esse else)
+        if (dto.idUsuarioCriador() != null) {
+            formExistente.setCriadoPor(
+                    Usuario.builder()
+                            .id_usuario(dto.idUsuarioCriador())
+                            .build()
+            );
+        }
+
+        // Se tiver campo de atualização, dá pra usar
+        // formExistente.setDataAtualizacao(LocalDateTime.now());
+
+        // 3) Salva o formulário atualizado
+        Formulario formSalvo = formularioService.atualizar(id, formExistente);
+
+        // 4) Remove as perguntas antigas desse formulário
+        // (implementa esse método na service/repository)
+        perguntaService.deletarPorFormulario(formSalvo.getId());
+
+        // 5) Recria as perguntas com base no DTO (igual ao POST)
+        List<PerguntaResponseDto> retorno = new ArrayList<>();
+
+        for (var item : dto.perguntas()) {
+            var perguntaDto = new PerguntaCreateDto(
+                    formSalvo.getId(),
+                    item.textoPergunta(),
+                    item.tipo(),
+                    item.opcoes()
+            );
+
+            var pergunta = perguntaService.criar(perguntaDto);
+
+            var perguntaResponseDto = new PerguntaResponseDto(
+                    pergunta.getId(),
+                    pergunta.getTextoPergunta(),
+                    pergunta.getTipo().name(),
+                    pergunta.getFormulario().getId(),
+                    pergunta.getOpcoes() != null
+                            ? pergunta.getOpcoes().stream()
+                            .map(o -> new PerguntaOpcaoResponseDto(
+                                    o.getId(),
+                                    o.getTextoOpcao(),
+                                    o.getValorNum()
+                            ))
+                            .toList()
+                            : null
+            );
+
+            retorno.add(perguntaResponseDto);
+        }
+
+        // 6) Monta o mesmo body do POST, mas retorna 200 OK
+        var body = new FormularioResponseDto(
+                formSalvo.getId(),
+                formSalvo.getTitulo(),
+                formSalvo.getDescricao(),
+                formSalvo.getAtivo(),
+                formSalvo.getEmpresa() != null ? formSalvo.getEmpresa().getId_empresa() : null,
+                retorno
+        );
+
+        return ResponseEntity.ok(body);
+    }
+
+
 
     @PostMapping("/{id}/publicar")
     public ResponseEntity<ColetaResponseDto> publicar(@PathVariable Integer id, @RequestBody PublicarColetaDto dto) throws Exception{

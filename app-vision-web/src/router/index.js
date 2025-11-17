@@ -9,6 +9,8 @@ import RegistreSe from '../views/Registrese.vue'
 import Marketing from '../views/Marketing.vue'
 import PerfilUsuario from '../views/PerfilUsuario.vue' // ✅ Importação adicionada
 import FormAdmin from '../views/FormAdmin.vue'
+import Relatorio from '../views/Relatorio.vue'
+import Medalhas from '../views/Medalhas.vue'
 
 const routes = [
   {
@@ -60,6 +62,16 @@ const routes = [
     path: '/form-admin',
     name: 'Admin-Colaborador',
     component: FormAdmin
+  },
+  {
+    path: '/relatorio',
+    name: 'Relatorio',
+    component: Relatorio
+  },
+  {
+    path: '/medalhas',
+    name: 'Medalhas',
+    component: Medalhas
   }
 ]
 

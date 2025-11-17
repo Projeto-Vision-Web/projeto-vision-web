@@ -69,4 +69,8 @@ public class PerguntaServiceImpl {
 
         return listaPerguntas;
     }
+
+    public void deletarPorFormulario(Integer idFormulario) {
+        perguntaRepository.deleteByFormularioId(idFormulario);
+    }
 }
