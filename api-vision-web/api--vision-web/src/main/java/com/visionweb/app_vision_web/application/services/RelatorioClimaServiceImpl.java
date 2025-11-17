@@ -30,14 +30,21 @@ public class    RelatorioClimaServiceImpl implements RelatorioClimaService {
     @Override
     public RelatorioClimaResponseDto gerarRelatorioClima(Integer empresaId, String periodoRef) {
 
-        // 1) encontra a coleta desse período/empresa
-        Coleta coleta = coletaRepo
-                .findByEmpresaAndPeriodoRef(empresaId, periodoRef)
-                .orElseThrow(() -> new RuntimeException("Coleta não encontrada"));
+        List<Coleta> coletas = coletaRepo.findByEmpresaAndPeriodoRef(empresaId, periodoRef);
 
-        // 2) busca todos os feedbacks processados dessa coleta
+        if (coletas.isEmpty()) {
+            throw new RuntimeException("Nenhuma coleta encontrada para a empresa "
+                    + empresaId + " no período " + periodoRef);
+        }
+
+        // pega só os ids
+        List<Integer> coletaIds = coletas.stream()
+                .map(Coleta::getId)
+                .toList();
+
+        // 2) busca todos os feedbacks processados dessas coletas
         List<FeedbackProcessado> feedbacks =
-                feedbackRepo.findByColetaId(coleta.getId());
+                feedbackRepo.findByColetaIds(coletaIds);
 
         // 3) total de colaboradores da empresa
         long totalColaboradores = colaboradorRepo.countByEmpresa(empresaId);

@@ -12,10 +12,10 @@ import java.util.List;
 public interface FeedbackProcessadoRepository extends JpaRepository<FeedbackProcessado, Integer> {
 
     @Query("""
-           SELECT f
-           FROM FeedbackProcessado f
-           WHERE f.resposta.coleta.id = :idColeta
+           select fp
+           from FeedbackProcessado fp
+           where fp.resposta.coleta.id in :coletaIds
            """)
-    List<FeedbackProcessado> findByColetaId(@Param("idColeta") Integer idColeta);
+    List<FeedbackProcessado> findByColetaIds(@Param("coletaIds") List<Integer> coletaIds);
 
 }
