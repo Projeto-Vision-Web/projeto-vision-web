@@ -9,7 +9,7 @@ import axios from 'axios';
 
 // baseURL vem do .env (ex.: VITE_API_URL=http://localhost:8080)
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
+  baseURL: 'http://localhost:8080/',
 });
 
 // ======================================================================
@@ -183,8 +183,9 @@ async function loadSurveysFromApi() {
     loading.value = true;
     errorMessage.value = '';
 
-    const { data } = await api.get('/formularios'); // ajuste se seu path for diferente
+    const { data } = await api.get('/formulario'); // ajuste se seu path for diferente
     surveys.value = (data || []).map(mapFormularioToSurvey);
+    console.log(data)
   } catch (err) {
     console.error(err);
     errorMessage.value = 'Erro ao carregar pesquisas.';
