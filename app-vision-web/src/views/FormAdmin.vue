@@ -84,6 +84,15 @@
                     >
                       <img src="../assets/publicar.png" alt="Publicar">
                     </button>
+
+                     <button 
+                      v-if="survey.status === 'Publicada'"
+                      class="icon-btn"
+                      title="Disparar a coleta" 
+                      @click.stop="dispararColeta(survey)"
+                    >
+                      <img src="../assets/publicar.png" alt="Disparar">
+                    </button>
                     
                     <button 
                       class="icon-btn" 
@@ -125,7 +134,7 @@
                   <div class="survey-info">
                     <h3>{{ survey.title }}</h3>
                     <span :class="['status-tag', survey.status.toLowerCase()]">{{ survey.status }}</span>
-                    <p class="subtitle">Avaliação trimestral do ambiente organizacional.</p>
+                    <p class="subtitle">Pesquisa organizacional semestral</p>
                     <div class="meta">
                       <span><i class="fas fa-question-circle"></i> {{ survey.questions.length }} perguntas</span>
                     </div>
@@ -394,6 +403,8 @@ import axios from 'axios';
 // API CONFIG
 // ======================================================================
 
+
+
 const api = axios.create({
   baseURL:  'http://localhost:8080',
 });
@@ -402,6 +413,22 @@ console.log('BASE URL API =>', api.defaults.baseURL);
 // ======================================================================
 // HELPERS
 // ======================================================================
+const COLETA_STORAGE_KEY = 'visionweb_form_coletas';
+
+function loadColetaMap() {
+  try {
+    const raw = localStorage.getItem(COLETA_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveColetaMap(map) {
+  localStorage.setItem(COLETA_STORAGE_KEY, JSON.stringify(map));
+}
+
+
 
 function decodeJwtPayload(token) {
   try {
@@ -454,9 +481,10 @@ const newSurvey = ref({
 });
 
 // Pesquisas ativas (para colaborador)
-const activeSurveys = computed(() =>
-  surveys.value.filter((s) => s.status === 'Ativa')
-);
+const activeSurveys = computed(() => {
+  console.log('O valor da pesquisa é: ', surveys.value);
+  return surveys.value.filter((s) => s.status === 'Disparada');
+});
 
 // ======================================================================
 // MAPEAMENTO DTO <-> VIEW MODEL
@@ -582,7 +610,7 @@ async function carregarUsuarioLogado() {
 
 async function dispararColeta(survey) {
   if (!survey.coletaId) {
-    alert('Não há coleta criada para esta pesquisa. Publique antes de disparar.');
+    alert('Não foi possível identificar a coleta desta pesquisa.');
     return;
   }
 
@@ -590,11 +618,20 @@ async function dispararColeta(survey) {
     loading.value = true;
     errorMessage.value = '';
 
-    const { data } = await api.post(`/coleta/${survey.coletaId}/disparar`);
-    // data.status agora deve ser "DISPARADA"
+    await api.post(`/coleta/${survey.coletaId}/disparar`);
 
-    survey.coletaStatus = data.status;
+    // atualiza na memória
     survey.status = 'Disparada';
+
+    // 🔹 atualiza no localStorage
+    const map = loadColetaMap();
+    const persisted = map[survey.id] ?? {};
+    map[survey.id] = {
+      ...persisted,
+      coletaId: survey.coletaId,
+      statusFront: 'Disparada',
+    };
+    saveColetaMap(map);
 
     alert('Coleta disparada com sucesso!');
   } catch (err) {
@@ -611,7 +648,19 @@ async function loadSurveysFromApi() {
     errorMessage.value = '';
 
     const { data } = await api.get('/formulario');
-    surveys.value = (data || []).map(mapFormularioToSurvey);
+    const mapped = (data || []).map(mapFormularioToSurvey);
+
+     const coletaMap = loadColetaMap();
+
+     mapped.forEach((s) => {
+      const persisted = coletaMap[s.id];
+      if (persisted) {
+        s.coletaId = persisted.coletaId ?? s.coletaId;
+        s.status = persisted.statusFront ?? s.status;
+      }
+    });
+
+    surveys.value = mapped;
   } catch (err) {
     console.error('Erro no loadSurveysFromApi', err);
     errorMessage.value = 'Erro ao carregar pesquisas.';
@@ -840,14 +889,21 @@ async function publishExistingSurvey(survey) {
 
     console.log('Publicando formulário', survey.id, 'com payload:', payload);
 
-    cost { data } = await api.post(`/formulario/${survey.id}/publicar`, payload);
+    const { data } = await api.post(`/formulario/${survey.id}/publicar`, payload);
 
     survey.coletaId = data.id;
     survey.coletaStatus = data.status; // "CRIADA"
     survey.status = 'Publicada';
+    
 
-    // Recarrega lista para refletir status atualizado
-    await loadSurveysFromApi();
+    console.log("O status da pesquisa é: ", survey.status)
+
+    const map = loadColetaMap();
+    map[survey.id] = {
+      coletaId: data.id,
+      statusFront: 'Publicada',
+    };
+    saveColetaMap(map);
 
     alert('Pesquisa publicada com sucesso!');
   } catch (err) {
@@ -855,6 +911,26 @@ async function publishExistingSurvey(survey) {
     alert('Erro ao publicar pesquisa.');
   } finally {
     loading.value = false;
+  }
+}
+
+async function syncSurveyStatusFromColeta(survey) {
+  if (!survey.coletaId) return; // rascunho, sem coleta
+
+  try {
+    const { data } = await api.get(`/coleta/${survey.coletaId}`);
+
+    survey.coletaStatus = data.status;
+
+    if (data.status === 'CRIADA') {
+      survey.status = 'Publicada';
+    } else if (data.status === 'DISPARADA') {
+      survey.status = 'Disparada';
+    } else {
+      survey.status = 'Rascunho'; // ou outro mapping se tiver mais estados
+    }
+  } catch (e) {
+    console.error('Erro ao sincronizar coleta', e);
   }
 }
 
@@ -1600,6 +1676,18 @@ body {
   background: none; 
 }
 
+.badge-disparada {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  color: #0ff; /* ciano neon */
+  background: rgba(0, 255, 255, 0.12);
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  text-shadow: 0 0 4px #0ff;
+}
+
 .survey-form-content:disabled .text-input,
 .survey-form-content:disabled .option-radio-item input[type="radio"] + label,
 .survey-form-content:disabled .scale-radio-item label {
@@ -1632,6 +1720,17 @@ body {
   margin-bottom: 10px;
   color: var(--color-text-light);
   font-size: 1.1em;
+}
+
+.badge-publicada {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  color: white;
+  background: linear-gradient(90deg, #6a00ff, #9f51ff);
+  box-shadow: 0 0 6px #6a00ff55;
 }
 
 /* Textarea */
