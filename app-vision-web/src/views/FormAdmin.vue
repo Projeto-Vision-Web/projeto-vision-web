@@ -1,629 +1,544 @@
-<template>
-  <div id="app">
-    <main class="container">
-
-      <section v-if="currentScreen === 'access'" class="access-page-content">
-        
-        <div class="header-titles">
-          <h1 class="hero-vision-title large-title">VisionWeb</h1>
-          <p class="hero-vision-subtitle large-subtitle">Sistema de Pesquisas de Clima Organizacional</p>
-        </div>
-
-        <div class="access-system-box">
-          <h2>Acesso ao Sistema</h2>
-          <p>Selecione seu tipo de acesso</p>
-          
-          <div class="profile-selector">
-            <button 
-              :class="['profile-btn', { 'active': profile === 'admin' }]" 
-              @click="selectProfile('admin')"
-            >
-              <img src="../assets/do-utilizador.png" alt="Admin" class="profile-btn-icon">
-              Administrador
-            </button>
-            
-            <button 
-              :class="['profile-btn', { 'active': profile === 'collaborator' }]" 
-              @click="selectProfile('collaborator')"
-            >
-              <img src="../assets/coordenacao.png" alt="Colaborador" class="profile-btn-icon">
-              Colaborador
-            </button>
-          </div>
-        </div>
-        
-        <transition name="fade-slide" mode="out-in">
-            <section v-if="profile === 'admin'" key="admin" class="dashboard">
-              <div class="dashboard-header">
-                <div class="header-content-left">
-                  <h2>Gerenciar Pesquisas</h2>
-                  <p>Crie e gerencie pesquisas de clima organizacional</p>
-                </div>
-                
-                <div class="dashboard-header-right">
-                  <button class="action-btn primary" @click="goToReportsPage">
-                    <i class="fas fa-chart-pie"></i> Relatórios
-                  </button>
-                  <button class="action-btn primary" @click="openCreateSurveyModal">
-                    <i class="fas fa-plus"></i> Nova Pesquisa
-                  </button>
-                </div>
-              </div>
-
-              <div class="stacked-survey-card">
-                <div class="survey-list">
-                  <p v-if="surveys.length === 0" class="no-data">
-                    Nenhuma pesquisa cadastrada ainda. Clique em "Nova Pesquisa" para começar.
-                  </p>
-                  
-                  <div 
-                      v-for="survey in surveys" 
-                      :key="survey.id" 
-                      class="survey-item" 
-                      @click.self="openSurveyDetails(survey)"
-                  >
-                    <div class="survey-info" @click.self="openSurveyDetails(survey)">
-                      <h3>{{ survey.title }}</h3>
-                      <span :class="['status-tag', survey.status.toLowerCase()]">{{ survey.status }}</span>
-                      <p class="subtitle">Total de {{ survey.questions.length }} perguntas.</p>
-                      <div class="meta">
-                        <span><i class="fas fa-calendar-alt"></i> Criada em {{ survey.createdDate }}</span>
-                        <span><i class="fas fa-chart-bar"></i> {{ survey.responses }} respostas</span>
-                        <span><i class="fas fa-question-circle"></i> {{ survey.questions.length }} perguntas</span>
-                      </div>
-                    </div>
-                    
-                    <div class="survey-actions">
-                      <button 
-                          class="icon-btn" 
-                          title="Publicar" 
-                          v-if="survey.status === 'Rascunho'" 
-                          @click="publishExistingSurvey(survey.id)"
-                      >
-                          <img src="../assets/publicar.png" alt="Publicar">
-                      </button>
-                      
-                      <button 
-                          class="icon-btn" 
-                          title="Editar" 
-                          @click="openEditSurveyModal(survey)"
-                      >
-                          <img src="../assets/editar.png" alt="Editar">
-                      </button>
-                      
-                      <button 
-                          class="icon-btn" 
-                          title="Deletar" 
-                          @click="deleteSurvey(survey.id)"
-                      >
-                          <img src="../assets/deletar.png" alt="Deletar">
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              </section>
-
-            <section v-else-if="profile === 'collaborator'" key="collaborator" class="dashboard">
-              <div class="dashboard-header">
-                <div class="header-content-left">
-                  <h2>Pesquisas Disponíveis</h2>
-                  <p>Responda às pesquisas disponíveis para colaborar com o clima organizacional.</p>
-                </div>
-              </div>
-              
-              <div class="stacked-survey-card">
-                <div class="survey-list">
-                  <p v-if="activeSurveys.length === 0" class="no-data">
-                    Não há pesquisas ativas no momento.
-                </p>
-                
-                <div v-for="survey in activeSurveys" :key="survey.id" class="survey-item">
-                  <div class="survey-info">
-                    <h3>{{ survey.title }}</h3>
-                    <span :class="['status-tag', survey.status.toLowerCase()]">{{ survey.status }}</span>
-                    <p class="subtitle">Avaliação trimestral do ambiente organizacional.</p>
-                    <div class="meta">
-                      <span><i class="fas fa-question-circle"></i> {{ survey.questions.length }} perguntas</span>
-                    </div>
-                  </div>
-                  <div class="survey-actions">
-                    <button class="action-btn primary small-btn" @click="openResponseModal(survey)">
-                      <i class="fas fa-comment-dots"></i> Responder
-                    </button>
-                  </div>
-                </div>
-              </div>
-              </div>
-              </section>
-        </transition>
-
-      </section>
-      <transition name="modal">
-        <div v-if="isCreatingSurvey" class="modal-overlay">
-          <div class="card create-survey-card modal-content">
-            <button class="close-modal-btn" @click="closeCreateSurveyModal"><i class="fas fa-times"></i></button>
-
-            <div class="modal-title-group">
-                <h2 v-if="editingSurveyId">Editar Pesquisa: {{ newSurvey.title }}</h2>
-                <h2 v-else>Criar Pesquisa de Clima</h2>
-                <p>Configure sua pesquisa de clima organizacional</p>
-            </div>
-
-            <div class="form-group">
-              <label for="title">Título da Pesquisa</label>
-              <input type="text" id="title" placeholder="Ex: Pesquisa de Clima Organizacional Q1 2024" v-model="newSurvey.title">
-            </div>
-
-            <div class="form-group questions-section">
-                <div class="questions-header-row">
-                    <label>Perguntas</label>
-                    <div class="question-type-buttons">
-                      <button class="type-btn" @click="addQuestion('text')"><i class="fas fa-keyboard"></i> Texto</button>
-                      <button class="type-btn" @click="addQuestion('multiple')"><i class="fas fa-list-ul"></i> Múltipla Escolha</button>
-                      <button class="type-btn" @click="addQuestion('scale')"><i class="fas fa-sliders-h"></i> Escala</button>
-                    </div>
-                </div>
-
-              <div v-if="newSurvey.questions.length === 0" class="no-data">Adicione suas perguntas acima.</div>
-              
-              <div v-for="(question, index) in newSurvey.questions" :key="index" class="question-item">
-                <div class="question-header">
-                  <span class="q-type-tag">{{ question.typeDisplay }}</span>
-                  <button class="delete-q-btn" @click="removeQuestion(index)"><i class="fas fa-times"></i></button>
-                </div>
-                
-                <label :for="'q-text-' + index">Pergunta {{ index + 1 }}</label>
-                <input 
-                  type="text" 
-                  :id="'q-text-' + index" 
-                  placeholder="Digite o texto da pergunta" 
-                  v-model="question.text"
-                  required
-                >
-                
-                <div v-if="question.type === 'multiple'" class="options-group">
-                  <label>Opções de Resposta</label>
-                  <div v-for="(option, oIndex) in question.options" :key="oIndex" class="option-item">
-                    <input type="text" v-model="question.options[oIndex]" :placeholder="'Opção ' + (oIndex + 1)">
-                    <button class="icon-btn remove-option-btn" @click="removeOption(index, oIndex)">
-                      <img src="../assets/deletar.png" alt="Deletar Opção">
-                    </button>
-                  </div>
-                  <button class="add-option-btn" @click="addOption(index)">+ Adicionar Opção</button>
-                </div>
-
-                <div v-if="question.type === 'scale'" class="scale-info">
-                  <p>Escala Padrão: 1 (Discordo Totalmente) a 5 (Concordo Totalmente)</p>
-                  <div style="display: flex; justify-content: space-between; margin-top: 10px; color: #a8a8a8;">
-                      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="action-buttons-footer">
-              <button class="action-btn secondary" @click="closeCreateSurveyModal">
-                <i class="fas fa-arrow-left"></i> Cancelar
-              </button>
-              
-              <button class="action-btn purple-gradient" @click="saveSurvey('Rascunho')">
-                <i class="fas fa-save"></i> 
-                Salvar {{ editingSurveyId ? 'como Rascunho' : 'Rascunho' }}
-              </button>
-              
-              <button 
-                  class="action-btn success" 
-                  @click="publishSurvey" 
-                  :disabled="!newSurvey.title || newSurvey.questions.length === 0"
-              >
-                  <i class="fas fa-paper-plane"></i> 
-                  {{ editingSurveyId && newSurvey.status === 'Ativa' ? 'Salvar e Manter Ativa' : 'Publicar Pesquisa' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </transition>
-      
-      <transition name="modal">
-        <div v-if="isResponding" class="modal-overlay">
-            <div class="card create-survey-card modal-content response-modal">
-                <button class="close-modal-btn" @click="closeResponseModal"><i class="fas fa-times"></i></button>
-
-                <div class="modal-title-group" v-if="currentSurveyToRespond">
-                    <h2 v-if="!isPreviewingSurvey">Responder: {{ currentSurveyToRespond.title }}</h2>
-                    <h2 v-if="isPreviewingSurvey">Visualizar: {{ currentSurveyToRespond.title }}</h2>
-                    
-                    <p v-if="!isPreviewingSurvey">Sua opinião é valiosa para o clima organizacional.</p>
-                    <p v-if="isPreviewingSurvey">Visualização da pesquisa como Administrador.</p>
-                </div>
-
-                <fieldset :disabled="isPreviewingSurvey" class="survey-form-content" v-if="currentSurveyToRespond">
-                    <div v-for="(question, index) in currentSurveyToRespond.questions" :key="index" class="question-item form-group">
-                        <label :for="'q-' + (index + 1)">
-                            {{ index + 1 }}. {{ question.text }} 
-                            <span class="q-type-tag">{{ question.typeDisplay }}</span>
-                        </label>
-                        
-                        <textarea 
-                            v-if="question.type === 'text'"
-                            :id="'q-' + (index + 1)" 
-                            rows="3"
-                            placeholder="Digite sua resposta aqui..."
-                            v-model="collaboratorResponses[index + 1]"
-                            class="text-input"
-                        ></textarea>
-
-                        <div v-else-if="question.type === 'multiple'" class="multiple-options-group">
-                            <div v-for="(option, oIndex) in question.options" :key="oIndex" class="option-radio-item">
-                                <input 
-                                    type="radio" 
-                                    :id="'q-' + (index + 1) + '-' + oIndex" 
-                                    :name="'q-' + (index + 1)" 
-                                    :value="option"
-                                    v-model="collaboratorResponses[index + 1]"
-                                >
-                                <label :for="'q-' + (index + 1) + '-' + oIndex">{{ option }}</label>
-                            </div>
-                        </div>
-
-                        <div v-else-if="question.type === 'scale'" class="scale-group radio-scale">
-                            <div class="scale-radio-options">
-                                <div v-for="n in 5" :key="n" class="scale-radio-item">
-                                    <input 
-                                        type="radio" 
-                                        :id="'q-' + (index + 1) + '-scale-' + n" 
-                                        :name="'q-' + (index + 1)" 
-                                        :value="n"
-                                        v-model.number="collaboratorResponses[index + 1]"
-                                    >
-                                    <label :for="'q-' + (index + 1) + '-scale-' + n">{{ n }}</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </fieldset>
-
-                <div v-if="!isPreviewingSurvey" class="action-buttons-footer">
-                    <button class="action-btn secondary" @click="closeResponseModal">
-                        <i class="fas fa-arrow-left"></i> Cancelar
-                    </button>
-                    <button class="action-btn primary" @click="submitResponses">
-                        <i class="fas fa-check-circle"></i> Enviar Respostas
-                    </button>
-                </div>
-
-                <div v-if="isPreviewingSurvey" class="action-buttons-footer preview-footer">
-                    <button class="action-btn purple-gradient" @click="closeResponseModal">
-                        <i class="fas fa-times"></i> Fechar Visualização
-                    </button>
-                </div>
-            </div>
-        </div>
-      </transition>
-      
-    </main>
-  </div>
-</template>
-
 <script setup>
-// LÓGICA DE SCRIPT ATUALIZADA
 import { ref, computed, watchEffect, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router'; 
+import { useRouter } from 'vue-router';
+import axios from 'axios';
 
-// --- ESTADOS DE NAVEGAÇÃO E DADOS ---
-const currentScreen = ref('access'); 
-const profile = ref('admin'); // 'admin' ou 'collaborator'
-const isCreatingSurvey = ref(false); 
+// ======================================================================
+// API CONFIG
+// ======================================================================
 
-const isResponding = ref(false); 
-const currentSurveyToRespond = ref(null); 
-const collaboratorResponses = ref({}); 
+// baseURL vem do .env (ex.: VITE_API_URL=http://localhost:8080)
+const api = axios.create({
+  baseURL: 'http://localhost:8080/',
+});
 
+// ======================================================================
+// ESTADOS PRINCIPAIS
+// ======================================================================
+
+const currentScreen = ref('access');
+const profile = ref('admin');
+
+const isCreatingSurvey = ref(false);
+const isResponding = ref(false);
 const isPreviewingSurvey = ref(false);
 
-// ID da pesquisa sendo editada. null = criando nova.
+const currentSurveyToRespond = ref(null);
+const collaboratorResponses = ref({});
+
 const editingSurveyId = ref(null);
 
-// Array PRINCIPAL de pesquisas (Vazio, mas será preenchido)
-const surveys = ref([]); 
+const surveys = ref([]); // lista de formulários vinda da API
 
-// Objeto para a pesquisa sendo CRIADA/EDITADA
+// survey em edição/criação
 const newSurvey = ref({
-    title: '',
-    questions: [],
-    responses: 0,
+  id: null,
+  title: '',
+  questions: [],
+  status: 'Rascunho',
+  responses: 0,
 });
 
-// Pesquisas ATIVAS para o Colaborador
-const activeSurveys = computed(() => {
-    return surveys.value.filter(s => s.status === 'Ativa');
+const loading = ref(false);
+const errorMessage = ref('');
+
+// Pesquisas ativas (para colaborador)
+const activeSurveys = computed(() =>
+  surveys.value.filter((s) => s.status === 'Ativa')
+);
+
+// ======================================================================
+// HELPERS DE MAPEAR DTO <-> VIEW MODEL
+// ======================================================================
+
+/**
+ * Mapeia um FormularioResponseDto vindo da API
+ * para o formato que o componente usa (survey).
+ *
+ * Assumindo que o back devolve algo assim:
+ * {
+ *   id: 1,
+ *   titulo: "Clima Q4",
+ *   descricao: "...",
+ *   status: "ATIVO" | "RASCUNHO",
+ *   dataCriacao: "2025-10-01",
+ *   totalRespostas: 42,
+ *   perguntas: [
+ *     {
+ *       id: 10,
+ *       textoPergunta: "A comunicação é eficaz?",
+ *       tipo: "TEXTO" | "MULTIPLA_ESCOLHA" | "ESCALA",
+ *       opcoes: [{ id: 1, textoOpcao: "Sim", valorNum: 1 }, ...]
+ *     }
+ *   ],
+ *   coletaAtualId: 5 // id da coleta ativa (se houver)
+ * }
+ */
+function mapFormularioToSurvey(dto) {
+  const statusFront =
+    dto.status === 'ATIVO' || dto.status === 'PUBLICADO' ? 'Ativa' : 'Rascunho';
+
+  const created =
+    dto.dataCriacao?.split('-').reverse().join('/') ?? '—';
+
+  return {
+    id: dto.id,
+    title: dto.titulo,
+    description: dto.descricao,
+    status: statusFront,
+    createdDate: created,
+    responses: dto.totalRespostas ?? 0,
+    coletaId: dto.coletaAtualId ?? null,
+    questions: (dto.perguntas || []).map((p) => ({
+      id: p.id,
+      text: p.textoPergunta,
+      type: mapTipoPerguntaBackToFront(p.tipo),
+      typeDisplay: mapTipoPerguntaDisplay(p.tipo),
+      options: (p.opcoes || []).map((o) => o.textoOpcao),
+    })),
+  };
+}
+
+function mapTipoPerguntaBackToFront(tipo) {
+  switch (tipo) {
+    case 'TEXTO':
+      return 'text';
+    case 'MULTIPLA_ESCOLHA':
+      return 'multiple';
+    case 'ESCALA':
+      return 'scale';
+    default:
+      return 'text';
+  }
+}
+
+function mapTipoPerguntaFrontToBack(type) {
+  switch (type) {
+    case 'text':
+      return 'TEXTO';
+    case 'multiple':
+      return 'MULTIPLA_ESCOLHA';
+    case 'scale':
+      return 'ESCALA';
+    default:
+      return 'TEXTO';
+  }
+}
+
+function mapTipoPerguntaDisplay(tipoBackOuFront) {
+  const t = tipoBackOuFront.toUpperCase?.() || tipoBackOuFront;
+  if (t === 'TEXTO' || t === 'TEXT') return 'Texto Livre';
+  if (t === 'MULTIPLA_ESCOLHA' || t === 'MULTIPLE') return 'Múltipla Escolha';
+  if (t === 'ESCALA' || t === 'SCALE') return 'Escala (1-5)';
+  return 'Texto Livre';
+}
+
+/**
+ * Mapeia o survey do front para o payload de criação/edição de formulário.
+ *
+ * Assumindo que o endpoint POST/PUT /formularios espera algo como:
+ * {
+ *   titulo,
+ *   descricao,
+ *   status,
+ *   perguntas: [
+ *     {
+ *       id (opcional em criação),
+ *       textoPergunta,
+ *       tipo,
+ *       opcoes: [{ textoOpcao, valorNum }]
+ *     }
+ *   ]
+ * }
+ */
+function mapSurveyToFormularioPayload(survey, statusBack) {
+  return {
+    titulo: survey.title,
+    descricao: survey.description || '',
+    status: statusBack, // "RASCUNHO" ou "ATIVO"
+    perguntas: survey.questions.map((q, indexPergunta) => ({
+      id: q.id ?? null,
+      textoPergunta: q.text,
+      tipo: mapTipoPerguntaFrontToBack(q.type),
+      opcoes:
+        q.type === 'multiple' || q.type === 'scale'
+          ? q.options
+              .filter((o) => o && o.trim() !== '')
+              .map((o, idx) => ({
+                id: null,
+                textoOpcao: o,
+                valorNum: idx + 1,
+              }))
+          : [],
+    })),
+  };
+}
+
+// ======================================================================
+// CARREGAR PESQUISAS DA API
+// ======================================================================
+
+async function loadSurveysFromApi() {
+  try {
+    loading.value = true;
+    errorMessage.value = '';
+
+    const { data } = await api.get('/formulario'); // ajuste se seu path for diferente
+    surveys.value = (data || []).map(mapFormularioToSurvey);
+    console.log(data)
+  } catch (err) {
+    console.error(err);
+    errorMessage.value = 'Erro ao carregar pesquisas.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  loadSurveysFromApi();
 });
 
-// =========================================================================
-// LÓGICA DE PERSISTÊNCIA E INICIALIZAÇÃO DE DADOS (LOCAL STORAGE)
-// =========================================================================
-const loadSurveys = () => {
-    const savedSurveys = localStorage.getItem('visionWebSurveys');
-    if (savedSurveys) {
-        surveys.value = JSON.parse(savedSurveys);
-    } else {
-        // Dados iniciais (mock) para testes, se não houver nada salvo
-        const mockSurveys = [
-            {
-                id: 1,
-                title: 'Clima Organizacional Q4 2025',
-                status: 'Ativa',
-                description: 'Pesquisa trimestral de clima.',
-                createdDate: '01/10/2025',
-                responses: 42,
-                questions: [{text: 'A comunicação interna é eficaz?', type: 'scale', typeDisplay: 'Escala (1-5)'}, {text: 'Oportunidades de crescimento?', type: 'multiple', typeDisplay: 'Múltipla Escolha', options: ['Sim', 'Não', 'Talvez']}]
-            },
-            {
-                id: 2,
-                title: 'Ambiente de Trabalho Remoto (Rascunho)',
-                status: 'Rascunho',
-                description: 'Pesquisa em desenvolvimento.',
-                createdDate: '05/10/2025',
-                responses: 0,
-                questions: [{text: 'Sugestões de melhoria?', type: 'text', typeDisplay: 'Texto Livre'}]
-            }
-        ];
-        surveys.value = mockSurveys;
-    }
-};
+// ======================================================================
+// NAVEGAÇÃO / PERFIL / HEADER
+// ======================================================================
 
-// Carrega os dados na inicialização
-loadSurveys();
-
-// Sincroniza o estado "surveys" com o localStorage sempre que ele mudar
-watchEffect(() => {
-    localStorage.setItem('visionWebSurveys', JSON.stringify(surveys.value));
-});
-// =========================================================================
-
-
-// --- LÓGICA DE NAVEGAÇÃO E PERFIS ---
-
-const router = useRouter(); // <--- O useRouter ESTÁ AQUI
+const router = useRouter();
 const showProfileDropdown = ref(false);
 
-// Fecha o dropdown
 const closeProfileDropdown = () => {
   showProfileDropdown.value = false;
 };
 
-// Alterna o dropdown
-const toggleProfileDropdown = () => {
+const toggleProfileDropdown = (event) => {
+  event.stopPropagation();
   showProfileDropdown.value = !showProfileDropdown.value;
 };
 
-// Navega para o perfil e fecha o dropdown
 const goToProfile = () => {
   router.push('/perfil');
   closeProfileDropdown();
 };
 
-// Faz logout (navega para login) e fecha o dropdown
 const logout = () => {
   router.push('/login');
   closeProfileDropdown();
 };
 
-// Lógica para fechar o dropdown ao clicar fora (no 'document')
+const handleClickOutside = (event) => {
+  // se clicar em qualquer lugar, fecha
+  showProfileDropdown.value = false;
+};
+
 onMounted(() => {
-  document.addEventListener('click', closeProfileDropdown);
+  document.addEventListener('click', handleClickOutside);
 });
+
 onUnmounted(() => {
-  document.removeEventListener('click', closeProfileDropdown);
+  document.removeEventListener('click', handleClickOutside);
 });
 
 const goToReportsPage = () => {
-  alert('Página de Relatórios Gerais (em construção)');
-  // No futuro, isso será: router.push('/relatorios-gerais');
+  router.push('/relatorios'); // ou apenas um alert se ainda for MVP
 };
 
 const selectProfile = (p) => {
-    profile.value = p;
+  profile.value = p;
 };
 
-// --- LÓGICA DO MODAL DE CRIAÇÃO/EDIÇÃO/RELATÓRIO ---
+// ======================================================================
+// MODAL DE CRIAÇÃO / EDIÇÃO
+// ======================================================================
+
 const resetNewSurvey = () => {
-    newSurvey.value = {
-        title: '',
-        questions: [],
-        responses: 0,
-    };
+  newSurvey.value = {
+    id: null,
+    title: '',
+    description: '',
+    questions: [],
+    responses: 0,
+    status: 'Rascunho',
+  };
 };
 
 const openCreateSurveyModal = () => {
-    resetNewSurvey();
-    editingSurveyId.value = null; // Garante modo de criação
-    isCreatingSurvey.value = true;
+  resetNewSurvey();
+  editingSurveyId.value = null;
+  isCreatingSurvey.value = true;
 };
 
 const closeCreateSurveyModal = () => {
-    isCreatingSurvey.value = false;
-    editingSurveyId.value = null; 
+  isCreatingSurvey.value = false;
+  editingSurveyId.value = null;
 };
 
-// Abre modal para edição
 const openEditSurveyModal = (survey) => {
-    newSurvey.value = JSON.parse(JSON.stringify(survey));
-    editingSurveyId.value = survey.id; 
-    isCreatingSurvey.value = true; 
+  newSurvey.value = JSON.parse(JSON.stringify(survey));
+  editingSurveyId.value = survey.id;
+  isCreatingSurvey.value = true;
 };
 
-// Controla o que acontece ao clicar no card
 const openSurveyDetails = (survey) => {
-    if (survey.status === 'Rascunho') {
-        openEditSurveyModal(survey);
-    } else {
-        openResponseModal(survey); 
-        isPreviewingSurvey.value = true; 
-    }
+  if (survey.status === 'Rascunho') {
+    openEditSurveyModal(survey);
+  } else {
+    openResponseModal(survey);
+    isPreviewingSurvey.value = true;
+  }
 };
 
-// Publica pesquisa Rascunho existente
-const publishExistingSurvey = (surveyId) => {
-    const surveyIndex = surveys.value.findIndex(s => s.id === surveyId);
-    if (surveyIndex !== -1) {
-        surveys.value[surveyIndex].status = 'Ativa';
-        alert(`Pesquisa "${surveys.value[surveyIndex].title}" publicada com sucesso!`);
-    }
-};
+// ======================================================================
+// CRUD / PUBLICAÇÃO (INTEGRADO COM API)
+// ======================================================================
 
-// Deleta pesquisa
-const deleteSurvey = (surveyId) => {
-    if (confirm("Tem certeza que deseja deletar esta pesquisa? Esta ação é irreversível.")) {
-        const initialLength = surveys.value.length;
-        surveys.value = surveys.value.filter(s => s.id !== surveyId);
-        if (surveys.value.length < initialLength) {
-            alert("Pesquisa deletada com sucesso.");
-        }
-    }
-};
-
-
-// --- LÓGICA DE FORMULÁRIO DE PERGUNTAS ---
 const addQuestion = (type) => {
-    let question = {
-        text: '',
-        type: type,
-        typeDisplay: type.charAt(0).toUpperCase() + type.slice(1)
-    };
+  let question = {
+    id: null,
+    text: '',
+    type,
+    typeDisplay: '',
+    options: [],
+  };
 
-    if (type === 'multiple') {
-        question.typeDisplay = 'Múltipla Escolha';
-        question.options = ['', '']; 
-    } else if (type === 'scale') {
-        question.typeDisplay = 'Escala (1-5)';
-        question.scaleMin = 1; 
-        question.scaleMax = 5; 
-    } else if (type === 'text') {
-        question.typeDisplay = 'Texto Livre';
-    }
-    
-    newSurvey.value.questions.push(question);
+  if (type === 'multiple') {
+    question.typeDisplay = 'Múltipla Escolha';
+    question.options = ['', ''];
+  } else if (type === 'scale') {
+    question.typeDisplay = 'Escala (1-5)';
+    question.options = ['1', '2', '3', '4', '5']; // opcional
+  } else {
+    question.typeDisplay = 'Texto Livre';
+  }
+
+  newSurvey.value.questions.push(question);
 };
 
 const removeQuestion = (index) => {
-    newSurvey.value.questions.splice(index, 1);
+  newSurvey.value.questions.splice(index, 1);
 };
 
 const addOption = (qIndex) => {
-    newSurvey.value.questions[qIndex].options.push('');
+  newSurvey.value.questions[qIndex].options.push('');
 };
 
 const removeOption = (qIndex, oIndex) => {
-    newSurvey.value.questions[qIndex].options.splice(oIndex, 1);
+  newSurvey.value.questions[qIndex].options.splice(oIndex, 1);
 };
 
-// --- LÓGICA DE SALVAR E PUBLICAR (UNIFICADA) ---
-const saveSurvey = (status) => {
-    if (!newSurvey.value.title) {
-        alert("O Título da Pesquisa é obrigatório para salvar!");
-        return;
-    }
-    
-    const questionsToSave = newSurvey.value.questions.filter(q => {
-        if (q.text.trim() === '') return false;
-        if (q.type === 'multiple') {
-            return q.options.filter(o => o.trim() !== '').length >= 2;
-        }
-        return true;
-    });
+async function saveSurvey(statusFront) {
+  if (!newSurvey.value.title) {
+    alert('O Título da Pesquisa é obrigatório para salvar!');
+    return;
+  }
 
-    if (questionsToSave.length === 0) {
-        alert("Adicione pelo menos uma pergunta válida (Múltipla Escolha requer no mínimo 2 opções).");
-        return;
+  const questionsToSave = newSurvey.value.questions.filter((q) => {
+    if (!q.text || q.text.trim() === '') return false;
+    if (q.type === 'multiple') {
+      return q.options.filter((o) => o && o.trim() !== '').length >= 2;
     }
+    return true;
+  });
+
+  if (questionsToSave.length === 0) {
+    alert(
+      'Adicione pelo menos uma pergunta válida (Múltipla Escolha requer no mínimo 2 opções).'
+    );
+    return;
+  }
+
+  const statusBack =
+    statusFront === 'Ativa' ? 'ATIVO' : 'RASCUNHO';
+
+  const surveyToPersist = {
+    ...newSurvey.value,
+    questions: questionsToSave,
+  };
+
+  const payload = mapSurveyToFormularioPayload(
+    surveyToPersist,
+    statusBack
+  );
+
+  try {
+    loading.value = true;
+    errorMessage.value = '';
 
     if (editingSurveyId.value) {
-        const surveyIndex = surveys.value.findIndex(s => s.id === editingSurveyId.value);
-        if (surveyIndex !== -1) {
-            surveys.value[surveyIndex].title = newSurvey.value.title;
-            surveys.value[surveyIndex].questions = questionsToSave;
-            surveys.value[surveyIndex].status = status; 
-            alert(`Pesquisa "${newSurvey.value.title}" atualizada com sucesso como ${status}.`);
-        }
+      const { data } = await api.put(
+        `/formularios/${editingSurveyId.value}`,
+        payload
+      );
+      const updated = mapFormularioToSurvey(data);
+      const idx = surveys.value.findIndex(
+        (s) => s.id === editingSurveyId.value
+      );
+      if (idx !== -1) {
+        surveys.value[idx] = updated;
+      }
+      alert(
+        `Pesquisa "${updated.title}" atualizada com sucesso como ${updated.status}.`
+      );
     } else {
-        const now = new Date();
-        const dateString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
-
-        const finalSurvey = {
-            id: Date.now(),
-            title: newSurvey.value.title,
-            status: status,
-            description: status === 'Ativa' ? 'Pesquisa de clima recém-publicada.' : 'Pesquisa em desenvolvimento.',
-            createdDate: dateString,
-            responses: 0,
-            questions: questionsToSave
-        };
-
-        surveys.value.push(finalSurvey);
-        alert(`Pesquisa "${finalSurvey.title}" salva como ${status}.`);
+      const { data } = await api.post('/formularios', payload);
+      const created = mapFormularioToSurvey(data);
+      surveys.value.push(created);
+      alert(
+        `Pesquisa "${created.title}" salva como ${created.status}.`
+      );
     }
-    
-    closeCreateSurveyModal(); 
-};
 
-const publishSurvey = () => {
-    saveSurvey('Ativa');
-};
+    closeCreateSurveyModal();
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao salvar pesquisa.');
+  } finally {
+    loading.value = false;
+  }
+}
 
-// --- LÓGICA DE RESPOSTA DO COLABORADOR (Estrutura) ---
+const publishSurvey = () => saveSurvey('Ativa');
+
+async function publishExistingSurvey(surveyId) {
+  try {
+    loading.value = true;
+    errorMessage.value = '';
+
+    // Exemplo de payload – ajuste para o que seu endpoint espera
+    const payload = {
+      idEmpresa: 1,
+      periodoRef: '2025Q4',
+      canal: 'EMAIL',
+    };
+
+    await api.post(`/formularios/${surveyId}/publicar`, payload);
+
+    // recarrega a lista para pegar status e coletaAtualId atualizado
+    await loadSurveysFromApi();
+
+    alert('Pesquisa publicada com sucesso!');
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao publicar pesquisa.');
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function deleteSurvey(surveyId) {
+  if (
+    !confirm(
+      'Tem certeza que deseja deletar esta pesquisa? Esta ação é irreversível.'
+    )
+  ) {
+    return;
+  }
+
+  try {
+    loading.value = true;
+    errorMessage.value = '';
+
+    await api.delete(`/formularios/${surveyId}`);
+    surveys.value = surveys.value.filter((s) => s.id !== surveyId);
+    alert('Pesquisa deletada com sucesso.');
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao deletar pesquisa.');
+  } finally {
+    loading.value = false;
+  }
+}
+
+// ======================================================================
+// RESPOSTAS DO COLABORADOR -> ENDPOINT DE COLETA
+// ======================================================================
+
 const openResponseModal = (survey) => {
-    currentSurveyToRespond.value = survey;
-    isPreviewingSurvey.value = false;
-    
-    const initialResponses = {};
-    survey.questions.forEach((q, index) => {
-        const qId = index + 1; 
-        if (q.type === 'scale') {
-            initialResponses[qId] = null; 
-        } else {
-            initialResponses[qId] = ''; 
-        }
-    });
-    collaboratorResponses.value = initialResponses;
-    
-    isResponding.value = true;
+  currentSurveyToRespond.value = survey;
+  isPreviewingSurvey.value = false;
+
+  const initialResponses = {};
+  survey.questions.forEach((q) => {
+    // usa o id da pergunta como chave
+    initialResponses[q.id] = q.type === 'scale' ? null : '';
+  });
+
+  collaboratorResponses.value = initialResponses;
+  isResponding.value = true;
 };
 
 const closeResponseModal = () => {
-    isResponding.value = false;
-    currentSurveyToRespond.value = null;
-    collaboratorResponses.value = {}; 
-    isPreviewingSurvey.value = false; 
+  isResponding.value = false;
+  currentSurveyToRespond.value = null;
+  collaboratorResponses.value = {};
+  isPreviewingSurvey.value = false;
 };
 
-const submitResponses = () => {
-    if (!currentSurveyToRespond.value) return;
+async function submitResponses() {
+  if (!currentSurveyToRespond.value) return;
 
-    const totalQuestions = currentSurveyToRespond.value.questions.length;
-    
-    const answeredCount = Object.values(collaboratorResponses.value).filter(val => {
-        if (typeof val === 'string' && val.trim() === '') return false;
-        if (val === null || val === undefined) return false;
-        return true;
-    }).length;
+  const qts = currentSurveyToRespond.value.questions;
+  const totalQuestions = qts.length;
 
-    if (answeredCount < totalQuestions) {
-        alert("Por favor, responda a todas as perguntas antes de enviar.");
-        return;
+  const answeredCount = qts.filter((q) => {
+    const value = collaboratorResponses.value[q.id];
+    if (typeof value === 'string') return value.trim() !== '';
+    return value !== null && value !== undefined;
+  }).length;
+
+  if (answeredCount < totalQuestions) {
+    alert('Por favor, responda a todas as perguntas antes de enviar.');
+    return;
+  }
+
+  // Assumindo que o survey tem `coletaId` (id da coleta ativa)
+  const coletaId = currentSurveyToRespond.value.coletaId;
+  if (!coletaId) {
+    alert(
+      'Não foi possível identificar a coleta ativa para esta pesquisa.'
+    );
+    return;
+  }
+
+  // Payload esperado pelo endpoint POST /coletas/{id}/respostas
+  // Ajuste para bater com seu DTO de request (idColaborador, etc.)
+  const respostasPayload = qts.map((q) => ({
+    idPergunta: q.id,
+    valorResposta: collaboratorResponses.value[q.id],
+  }));
+
+  const payload = {
+    idColaborador: 1, // TODO: pegar do usuário logado / token
+    respostas: respostasPayload,
+  };
+
+  try {
+    loading.value = true;
+    errorMessage.value = '';
+
+    await api.post(`/coletas/${coletaId}/respostas`, payload);
+
+    alert(
+      `Obrigado! Sua resposta para "${currentSurveyToRespond.value.title}" foi enviada com sucesso!`
+    );
+
+    // Atualiza contador de respostas localmente
+    const idx = surveys.value.findIndex(
+      (s) => s.id === currentSurveyToRespond.value.id
+    );
+    if (idx !== -1) {
+      surveys.value[idx].responses =
+        (surveys.value[idx].responses || 0) + 1;
     }
 
-    const surveyIndex = surveys.value.findIndex(s => s.id === currentSurveyToRespond.value.id);
-    if (surveyIndex !== -1) {
-        surveys.value[surveyIndex].responses++; 
-    }
-    
-    alert(`Obrigado! Sua resposta para "${currentSurveyToRespond.value.title}" foi enviada com sucesso!`);
-    
     closeResponseModal();
-};
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao enviar respostas.');
+  } finally {
+    loading.value = false;
+  }
+}
 </script>
+<<<<<<< HEAD
 
 <style>
 /* ========================================================= */
@@ -1609,3 +1524,5 @@ body {
   transform: translateY(-10px);
 }
 </style>
+=======
+>>>>>>> e8094ca10ac269b7e8efaf52d063c6276c239cdd

@@ -9,7 +9,6 @@ public class LoginDto {
 
     private String email;
     private String senha;
-    private TipoUsuario tipoUsuario;
 
     public Login construirLogin() {
         return new Login();
