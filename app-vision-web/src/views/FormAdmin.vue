@@ -1028,7 +1028,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); 
+    background-color: rgba(0, 0, 0, 0.9); 
     backdrop-filter: blur(5px); 
     -webkit-backdrop-filter: blur(5px);
     display: flex;
@@ -1123,6 +1123,7 @@ body {
 }
 
 .question-type-buttons .type-btn {
+    margin-top: 15px;
     padding: 8px 15px;
     font-size: 0.9em;
     background-color: var(--color-secondary-btn); 
@@ -1144,6 +1145,7 @@ body {
 
 
 .form-group input[type="text"] {
+    margin-top: 15px;
     width: 100%; 
     padding: 12px;
     background-color: #222222;
