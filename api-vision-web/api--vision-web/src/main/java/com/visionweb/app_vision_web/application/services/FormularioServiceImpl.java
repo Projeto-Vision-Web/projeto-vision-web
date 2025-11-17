@@ -16,6 +16,7 @@ public class FormularioServiceImpl implements FormularioService {
         this.formularioRepository = formularioRepository;
     }
 
+
     @Override
     public List<Formulario> listarTodos() {
         return formularioRepository.findAll();

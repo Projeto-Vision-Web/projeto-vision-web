@@ -9,6 +9,7 @@ public class LoginDto {
 
     private String email;
     private String senha;
+    private int Id;
 
     public Login construirLogin() {
         return new Login();

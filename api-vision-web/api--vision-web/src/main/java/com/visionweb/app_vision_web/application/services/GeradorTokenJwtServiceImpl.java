@@ -33,6 +33,7 @@ public class GeradorTokenJwtServiceImpl implements GeradorTokenJwtService {
         String token = Jwts.builder()
                 .setSubject(loginDto.getEmail()) // sub
                 .claim("email", loginDto.getEmail()) // email
+                .claim("id_usuario", loginDto.getId())
                 .setId(UUID.randomUUID().toString()) // jti
                 .setIssuer(jwtSettings.getIssuer())
                 .setAudience(jwtSettings.getAudience())

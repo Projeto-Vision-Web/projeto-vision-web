@@ -44,6 +44,10 @@ public class AutenticacaoServiceImpl implements AutenticacaoService {
     public TokenDto autenticar(LoginDto loginDto) throws Exception{
         Optional<Login> loginExistente = loginRepository.findByEmail(loginDto.getEmail());
 
+        Login login = loginExistente.get();
+
+        loginDto.setId(login.getId_login()); // <-- ajuste aqui conforme seu campo
+
         var senhaValida = ValidadorSenha.verificarSenha(loginDto.getSenha(), loginExistente.get().getSenha());
 
         if (loginExistente.isPresent() && senhaValida){

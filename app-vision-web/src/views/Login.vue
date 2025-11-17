@@ -76,6 +76,22 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+function decodeJwtPayload(token) {
+  try {
+    const [, payloadBase64Url] = token.split('.')
+    if (!payloadBase64Url) return null
+
+    const base64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=')
+
+    const jsonString = atob(padded)
+    return JSON.parse(jsonString)
+  } catch (e) {
+    console.error('Erro ao decodificar JWT:', e)
+    return null
+  }
+}
+
 const router = useRouter()
 
 const mensagemErro = ref('')
@@ -149,6 +165,21 @@ const logarUsuario = async () => {
       mensagemErro.value = texto
       alert(texto)
       return
+    }
+
+    const payload = decodeJwtPayload(data.token)
+    console.log('JWT payload:', payload)
+
+    if (payload) {
+      // id_usuario vem do backend com esse nome
+      if (payload.id_usuario !== undefined && payload.id_usuario !== null) {
+        localStorage.setItem('userId', payload.id_usuario)
+      }
+
+      // se quiser guardar o email também:
+      if (payload.email) {
+        localStorage.setItem('userEmail', payload.email)
+      }
     }
 
     localStorage.setItem('token', data.token)

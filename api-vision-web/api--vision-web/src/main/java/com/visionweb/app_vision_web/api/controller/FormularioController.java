@@ -78,6 +78,12 @@ public class FormularioController {
         return ResponseEntity.created(URI.create("/api/formularios/" + formSalvo.getId())).body(body);
     }
 
+
+   // @PutMapping
+    //public ResponseEntity<FormularioResponseDto> editar(@RequestBody @Valid FormularioCreateDto dto){
+
+    //}
+
     @PostMapping("/{id}/publicar")
     public ResponseEntity<ColetaResponseDto> publicar(@PathVariable Integer id, @RequestBody PublicarColetaDto dto) throws Exception{
 
