@@ -1,8 +1,12 @@
 package com.visionweb.app_vision_web.application.services;
 
 import com.visionweb.app_vision_web.domain.contracts.repository.FormularioRepository;
+import com.visionweb.app_vision_web.domain.contracts.repository.PerguntaOpcaoRepository;
+import com.visionweb.app_vision_web.domain.contracts.repository.PerguntaRepository;
 import com.visionweb.app_vision_web.domain.contracts.service.FormularioService;
 import com.visionweb.app_vision_web.domain.core.entities.Formulario;
+import com.visionweb.app_vision_web.domain.core.entities.Pergunta;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,9 +15,13 @@ import java.util.List;
 public class FormularioServiceImpl implements FormularioService {
 
     private final FormularioRepository formularioRepository;
+    private final PerguntaRepository perguntaRepository;
+    private final PerguntaOpcaoRepository perguntaOpcaoRepository;
 
-    public FormularioServiceImpl(FormularioRepository formularioRepository) {
+    public FormularioServiceImpl(FormularioRepository formularioRepository, PerguntaRepository perguntaRepository, PerguntaOpcaoRepository perguntaOpcaoRepository) {
         this.formularioRepository = formularioRepository;
+        this.perguntaRepository = perguntaRepository;
+        this.perguntaOpcaoRepository = perguntaOpcaoRepository;
     }
 
 
@@ -65,7 +73,22 @@ public class FormularioServiceImpl implements FormularioService {
 
 
     @Override
-    public void excluir(Integer id) {
-        formularioRepository.deleteById(id);
+    @Transactional
+    public void excluir(Integer idFormulario) {
+
+        // 1. Carrega todas as perguntas do formulário
+        List<Pergunta> perguntas = perguntaRepository.findByFormulario_Id(idFormulario);
+
+        for (Pergunta pergunta : perguntas) {
+
+            // 2. Deleta opções da pergunta
+            perguntaOpcaoRepository.deleteByPerguntaId(pergunta.getId());
+        }
+
+        // 3. Deleta as perguntas
+        perguntaRepository.deleteByFormularioId(idFormulario);
+
+        // 4. Deleta o formulário
+        formularioRepository.deleteById(idFormulario);
     }
 }

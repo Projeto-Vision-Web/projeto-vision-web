@@ -5,6 +5,7 @@ import com.visionweb.app_vision_web.application.services.PerguntaServiceImpl;
 import com.visionweb.app_vision_web.domain.contracts.service.ColetaService;
 import com.visionweb.app_vision_web.domain.contracts.service.FormularioService;
 import com.visionweb.app_vision_web.domain.core.entities.*;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -219,6 +220,20 @@ public class FormularioController {
                 .toList();
 
         return ResponseEntity.ok(retorno);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluir(@PathVariable Integer id) {
+        try {
+            formularioService.excluir(id);
+            return ResponseEntity.noContent().build(); // 204
+        }
+        catch (EntityNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        }
+        catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
 

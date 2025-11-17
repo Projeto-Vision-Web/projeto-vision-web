@@ -34,7 +34,13 @@
 
     <div class="tabs">
       <button class="tab active">Atividade Recente</button>
-      <button class="tab">Medalhas</button>
+       <button 
+        class="tab"
+        :class="{ active: activeTab === 'medalhas' }"
+        @click="goToMedalhas"
+      >
+        Medalhas
+      </button>
     </div>
 
     <section class="activity">
@@ -73,6 +79,11 @@ export default {
       this.activeTab = tab;
       console.log(`Aba "${tab}" selecionada`);
     },
+
+     goToMedalhas() {
+      this.activeTab = 'medalhas';
+      this.$router.push('/medalhas');    
+    }
   },
 };
 </script>
